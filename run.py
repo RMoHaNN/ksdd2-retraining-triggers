@@ -15,9 +15,10 @@ import webbrowser
 import zipfile
 from pathlib import Path
 
-from src.data import CONFIG, ROOT
+from src.data import CONFIG, ROOT, figure_items
 from src.model import load_model
 from src.experiments import load_records
+from src.figures import make_all
 
 RESULTS = ROOT / "results"
 BUNDLE_URL = "https://github.com/RMoHaNN/ksdd2-retraining-triggers/releases/download/paper-run/paper_run.zip"
@@ -132,7 +133,22 @@ def main():
     training, conditions, replays = (json.loads((folder / name).read_text(encoding="utf-8"))
                                     for name in ("training.json", "conditions.json", "replays.json"))
     model, threshold = load_model(folder / "v1.pt")
-    load_records(RESULTS, training, conditions, replays, model, threshold)
+    client, ids = load_records(RESULTS, training, conditions, replays, model, threshold)
+    items = figure_items(args.data)
+    if not items:
+        print("Defect-crop figure skipped: download KolektorSDD2 from https://www.vicos.si/resources/kolektorsdd2/ and use --data PATH.")
+    paths, details = make_all(model, threshold, items, replays)
+    for name, files in paths.items():
+        targets = ([ids["managed-seed0"]] if name == "fig_architecture" else
+                   [ids[row["condition"]] for row in conditions] if name == "fig_conditions" else
+                   [ids[key] for key in replays])
+        for run_id in targets:
+            for path in files:
+                client.log_artifact(run_id, str(path), "figures")
+    client.log_dict(ids["managed-seed0"], details["layer_shapes"], "layer_shapes.json")
+    if details["condition_scores"]:
+        client.log_dict(ids["nominal"], details["condition_scores"], "condition_scores.json")
+    client.log_dict(ids["quality-G1"], details["gate_check"], "gate_check.json")
     print_tables(training, conditions, replays)
     if not args.no_ui:
         dashboard()
