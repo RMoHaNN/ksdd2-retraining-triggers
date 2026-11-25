@@ -1,0 +1,43 @@
+data:
+  path: data/KolektorSDD2
+  image_size: [512, 192]
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  split_seed: 0
+  validation_fraction: 0.15
+model:
+  prediction_batch_size: 32
+  workers: 0
+monitor:
+  pca_components: 10
+  pca_seed: 0
+  ks_alpha: 0.05
+  psi_threshold: 0.15
+  psi_bins: 10
+  psi_epsilon: 0.0001
+  alarm_features: 4
+  ap_drop: 0.10
+  recall_drop: 0.15
+conditions:
+  nominal: {label: Nominal}
+  lighting: {label: Lighting change, brightness: 1.30, contrast: 0.85}
+  darker: {label: Darker scene, brightness: 0.65}
+  lighting_noise: {label: Lighting + noise, brightness: 1.30, contrast: 0.85, noise_sigma: 10.0}
+  jpeg: {label: JPEG compression, jpeg_quality: 15}
+  defocus_mild: {label: Mild defocus, blur_radius: 1.5}
+  defocus: {label: Strong defocus, blur_radius: 3.0}
+replay:
+  seed: 0
+  schedule: [nominal, nominal, lighting, lighting, lighting_noise, defocus, defocus, defocus]
+  settings: [[none, null], [drift, G1], [quality, G1], [drift, G2], [quality, G2]]
+gates:
+  G1: {nominal_ap_loss: 0.02}
+  G2: {nominal_ap_floor: 0.90}
+figures:
+  condition_image: '20319'
+  crop_min_side: 72
+  crop_scale: 1.7
+  dpi: 600
+  gate_batch: 6
+noise_seed_overrides:
+  20319: 1663607198  # The selected paper image uses its recorded noise sample.
